@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>recall() — DSA spaced recall tracker</title>
+</head>
+<body style="margin:0;padding:0;background:#0E1420;">
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  .recall-root {
+    --bg-deep: #0E1420;
+    --bg-panel: #161D2E;
+    --bg-panel-2: #1B2436;
+    --border: #2A334A;
+    --border-soft: #212B40;
+    --text-primary: #E8EAF2;
+    --text-muted: #8891A8;
+    --text-dim: #545F76;
+    --amber: #E8A33D;
+    --green: #5FBF8F;
+    --rose: #E2685C;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: var(--sans);
+    padding: 28px 20px 60px;
+    border-radius: 14px;
+    min-height: 100vh;
+  }
+  .recall-root * { box-sizing: border-box; }
+  .rc-wrap { max-width: 780px; margin: 0 auto; }
+
+  .rc-header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px; }
+  .rc-title { font-family: var(--mono); font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
+  .rc-title span { color: var(--amber); }
+  .rc-stats { font-family: var(--mono); font-size: 12px; color: var(--text-muted); display:flex; gap: 14px; }
+  .rc-stats b { color: var(--text-primary); }
+  .rc-sub { color: var(--text-muted); font-size: 13px; margin-bottom: 28px; }
+
+  .rc-section { margin-bottom: 30px; }
+  .rc-section-title {
+    font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--text-dim); margin-bottom: 12px; display:flex; align-items:center; gap:8px;
+  }
+  .rc-section-title::after { content:''; flex:1; height:1px; background: var(--border-soft); }
+
+  /* Today's picks */
+  .rc-picks { display:grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 620px) { .rc-picks { grid-template-columns: 1fr; } }
+  .rc-card {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px; position: relative; overflow: hidden;
+  }
+  .rc-card.done { opacity: 0.55; }
+  .rc-card-topic { font-family: var(--mono); font-size: 10px; color: var(--amber); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .rc-card-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; line-height: 1.3; }
+  .rc-card-name a { color: var(--text-primary); text-decoration: none; border-bottom: 1px dashed var(--text-dim); }
+  .rc-card-meta { font-family: var(--mono); font-size: 11px; color: var(--text-muted); margin-bottom: 14px; }
+  .rc-stage { display:flex; gap:3px; margin-bottom: 14px; }
+  .rc-stage-dot { width: 14px; height: 4px; border-radius: 2px; background: var(--border); }
+  .rc-stage-dot.filled { background: var(--green); }
+  .rc-hint-toggle { font-family: var(--mono); font-size: 11px; color: var(--text-dim); cursor:pointer; text-decoration: underline; text-underline-offset: 3px; background:none; border:none; padding:0; margin-bottom: 12px; display:block; }
+  .rc-hint-box { font-size: 12px; color: var(--text-muted); background: var(--bg-deep); border: 1px solid var(--border-soft); border-radius: 6px; padding: 8px 10px; margin-bottom: 12px; display:none; }
+  .rc-hint-box.show { display:block; }
+  .rc-actions { display:flex; gap: 8px; }
+  .rc-btn { font-family: var(--sans); font-size: 12px; font-weight: 600; padding: 8px 12px; border-radius: 7px; border: 1px solid transparent; cursor: pointer; flex:1; transition: transform 0.1s ease; }
+  .rc-btn:active { transform: scale(0.97); }
+  .rc-btn-solved { background: rgba(95,191,143,0.14); color: var(--green); border-color: rgba(95,191,143,0.3); }
+  .rc-btn-solved:hover { background: rgba(95,191,143,0.22); }
+  .rc-btn-struggle { background: rgba(226,104,92,0.1); color: var(--rose); border-color: rgba(226,104,92,0.25); }
+  .rc-btn-struggle:hover { background: rgba(226,104,92,0.18); }
+  .rc-done-msg { font-family: var(--mono); font-size: 12px; color: var(--green); }
+  .rc-empty { font-size: 13px; color: var(--text-muted); background: var(--bg-panel); border: 1px dashed var(--border); border-radius: 10px; padding: 20px; text-align:center; grid-column: 1 / -1; }
+
+  /* Add form */
+  .rc-form { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; display:grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
+  .rc-form input, .rc-form textarea {
+    background: var(--bg-deep); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);
+    padding: 9px 11px; font-family: var(--sans); font-size: 13px; width: 100%; outline: none;
+  }
+  .rc-form input:focus, .rc-form textarea:focus { border-color: var(--amber); }
+  .rc-form textarea { grid-column: 1 / -1; resize: vertical; min-height: 40px; font-family: var(--sans); }
+  .rc-form .rc-full { grid-column: 1 / -1; }
+  .rc-add-btn {
+    grid-column: 1 / -1; background: var(--amber); color: #1A1408; font-weight: 700; font-size: 13px;
+    border: none; border-radius: 7px; padding: 10px; cursor: pointer; font-family: var(--sans);
+  }
+  .rc-add-btn:hover { filter: brightness(1.08); }
+
+  /* Log table */
+  .rc-log-controls { display:flex; gap:8px; margin-bottom: 10px; }
+  .rc-log-controls input, .rc-log-controls select {
+    background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-primary);
+    border-radius: 6px; padding: 7px 10px; font-size: 12px; font-family: var(--sans);
+  }
+  .rc-log-controls input { flex:1; }
+  .rc-row { display:grid; grid-template-columns: 1fr auto auto auto auto; gap: 10px; align-items:center; padding: 10px 12px; border-bottom: 1px solid var(--border-soft); }
+  .rc-row:last-child { border-bottom: none; }
+  .rc-row-name { font-size: 13px; font-weight: 500; }
+  .rc-row-name a { color: var(--text-primary); text-decoration:none; }
+  .rc-row-topic { font-family: var(--mono); font-size: 10px; color: var(--text-dim); }
+  .rc-row-due { font-family: var(--mono); font-size: 11px; }
+  .rc-row-due.overdue { color: var(--amber); }
+  .rc-row-due.ok { color: var(--text-muted); }
+  .rc-heat { display:flex; gap: 2px; }
+  .rc-heat-dot { width: 6px; height: 6px; border-radius: 1px; background: var(--border); }
+  .rc-heat-dot.s { background: var(--green); }
+  .rc-heat-dot.f { background: var(--rose); }
+  .rc-del { background:none; border:none; color: var(--text-dim); cursor:pointer; font-size: 14px; padding: 2px 6px; }
+  .rc-del:hover { color: var(--rose); }
+  .rc-log-body { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .rc-log-empty { padding: 24px; text-align:center; color: var(--text-muted); font-size: 13px; }
+</style>
+
+<div class="recall-root">
+  <div class="rc-wrap">
+    <div class="rc-header">
+      <div class="rc-title">re<span>call</span>()</div>
+      <div class="rc-stats">
+        <span><b id="rc-stat-total">0</b> logged</span>
+        <span><b id="rc-stat-due">0</b> due today</span>
+      </div>
+    </div>
+    <div class="rc-sub">Your spaced-recall log for DSA problems. Solve blind, mark honestly, let the intervals do the rest.</div>
+
+    <div class="rc-section">
+      <div class="rc-section-title">Today's recall</div>
+      <div class="rc-picks" id="rc-picks"></div>
+    </div>
+
+    <div class="rc-section">
+      <div class="rc-section-title">Log a new problem</div>
+      <div class="rc-form">
+        <input id="rc-in-name" placeholder="Problem name (e.g. Longest Substring Without Repeating Characters)" />
+        <input id="rc-in-topic" placeholder="Topic (e.g. Sliding Window)" />
+        <input id="rc-in-link" class="rc-full" placeholder="Link (optional)" />
+        <textarea id="rc-in-notes" placeholder="Private hint / key insight for future-you (optional, hidden by default)"></textarea>
+        <button class="rc-add-btn" id="rc-add-btn">+ Add to rotation</button>
+      </div>
+    </div>
+
+    <div class="rc-section">
+      <div class="rc-section-title">Full log</div>
+      <div class="rc-log-controls">
+        <input id="rc-search" placeholder="Filter by name or topic..." />
+      </div>
+      <div class="rc-log-body" id="rc-log-body"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const INTERVALS = [1, 3, 7, 14, 30, 60, 120];
+
+  let problems = [];
+  let dailyPicks = null; // {date, pickIds}
+
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function addDays(dateStr, n) {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function daysBetween(a, b) {
+    return Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00')) / 86400000);
+  }
+  function uid() { return 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem('rc-problems');
+      problems = raw ? JSON.parse(raw) : [];
+    } catch (e) { problems = []; }
+    try {
+      const raw = localStorage.getItem('rc-daily-picks');
+      dailyPicks = raw ? JSON.parse(raw) : null;
+    } catch (e) { dailyPicks = null; }
+  }
+  function saveProblems() {
+    try { localStorage.setItem('rc-problems', JSON.stringify(problems)); }
+    catch (e) { console.error('save failed', e); }
+  }
+  function savePicks() {
+    try { localStorage.setItem('rc-daily-picks', JSON.stringify(dailyPicks)); }
+    catch (e) { console.error('save failed', e); }
+  }
+
+  function computePicks() {
+    const today = todayStr();
+    if (dailyPicks && dailyPicks.date === today) {
+      dailyPicks.pickIds = dailyPicks.pickIds.filter(id => problems.some(p => p.id === id));
+      return dailyPicks.pickIds;
+    }
+    const overdue = problems.filter(p => p.nextDue <= today).sort((a,b) => a.nextDue.localeCompare(b.nextDue));
+    const fresh = problems.filter(p => p.history.length === 0 && daysBetween(p.dateAdded, today) <= 2 && !overdue.includes(p));
+
+    let picks = [];
+    if (overdue.length >= 2) {
+      picks.push(overdue[0].id);
+      if (fresh.length && Math.random() < 0.4) {
+        picks.push(fresh[0].id);
+      } else {
+        picks.push(overdue[1].id);
+      }
+    } else if (overdue.length === 1) {
+      picks.push(overdue[0].id);
+      if (fresh.length) picks.push(fresh[0].id);
+      else {
+        const rest = problems.filter(p => p.id !== overdue[0].id).sort((a,b) => a.nextDue.localeCompare(b.nextDue));
+        if (rest.length) picks.push(rest[0].id);
+      }
+    } else {
+      const rest = problems.slice().sort((a,b) => a.nextDue.localeCompare(b.nextDue));
+      picks = rest.slice(0, 2).map(p => p.id);
+    }
+    dailyPicks = { date: today, pickIds: picks };
+    savePicks();
+    return picks;
+  }
+
+  function render() {
+    const today = todayStr();
+    document.getElementById('rc-stat-total').textContent = problems.length;
+    document.getElementById('rc-stat-due').textContent = problems.filter(p => p.nextDue <= today).length;
+
+    const pickIds = computePicks();
+    const picksEl = document.getElementById('rc-picks');
+    picksEl.innerHTML = '';
+    if (problems.length < 2) {
+      picksEl.innerHTML = '<div class="rc-empty">Add a couple of problems below and todays recall picks will show up here.</div>';
+    } else if (!pickIds.length) {
+      picksEl.innerHTML = '<div class="rc-empty">Nothing due right now. Add more problems or check back tomorrow.</div>';
+    } else {
+      pickIds.forEach(id => {
+        const p = problems.find(x => x.id === id);
+        if (!p) return;
+        picksEl.appendChild(renderPickCard(p, today));
+      });
+    }
+
+    renderLog();
+  }
+
+  function renderPickCard(p, today) {
+    const wrap = document.createElement('div');
+    wrap.className = 'rc-card';
+    const reviewedToday = p.lastReviewed === today && p.history.length && p.history[p.history.length-1].date === today;
+
+    const stageDots = INTERVALS.map((_, i) =>
+      `<div class="rc-stage-dot ${i <= p.intervalIndex ? 'filled' : ''}"></div>`
+    ).join('');
+
+    const nameHtml = p.link
+      ? `<a href="${escapeAttr(p.link)}" target="_blank" rel="noopener">${escapeHtml(p.name)}</a>`
+      : escapeHtml(p.name);
+
+    const daysSince = daysBetween(p.lastReviewed, today);
+
+    wrap.innerHTML = `
+      <div class="rc-card-topic">${escapeHtml(p.topic || 'untagged')}</div>
+      <div class="rc-card-name">${nameHtml}</div>
+      <div class="rc-card-meta">last reviewed ${daysSince === 0 ? 'today' : daysSince + 'd ago'} · stage ${p.intervalIndex+1}/${INTERVALS.length}</div>
+      <div class="rc-stage">${stageDots}</div>
+      ${p.notes ? `<button class="rc-hint-toggle" data-hint="${p.id}">show hint</button><div class="rc-hint-box" id="hint-${p.id}">${escapeHtml(p.notes)}</div>` : ''}
+      ${reviewedToday
+        ? `<div class="rc-done-msg">&#10003; reviewed today — see you at stage ${p.intervalIndex+1} in ${INTERVALS[p.intervalIndex]}d</div>`
+        : `<div class="rc-actions">
+             <button class="rc-btn rc-btn-solved" data-solve="${p.id}">&#10003; Solved from memory</button>
+             <button class="rc-btn rc-btn-struggle" data-struggle="${p.id}">Struggled</button>
+           </div>`
+      }
+    `;
+    if (reviewedToday) wrap.classList.add('done');
+
+    const hintBtn = wrap.querySelector('[data-hint]');
+    if (hintBtn) hintBtn.addEventListener('click', () => {
+      const box = document.getElementById('hint-' + p.id);
+      box.classList.toggle('show');
+      hintBtn.textContent = box.classList.contains('show') ? 'hide hint' : 'show hint';
+    });
+    const solveBtn = wrap.querySelector('[data-solve]');
+    if (solveBtn) solveBtn.addEventListener('click', () => markReview(p.id, 'solved'));
+    const struggleBtn = wrap.querySelector('[data-struggle]');
+    if (struggleBtn) struggleBtn.addEventListener('click', () => markReview(p.id, 'struggled'));
+
+    return wrap;
+  }
+
+  function markReview(id, result) {
+    const today = todayStr();
+    const p = problems.find(x => x.id === id);
+    if (!p) return;
+    if (result === 'solved') {
+      p.intervalIndex = Math.min(p.intervalIndex + 1, INTERVALS.length - 1);
+    } else {
+      p.intervalIndex = Math.max(p.intervalIndex - 1, 0);
+    }
+    p.lastReviewed = today;
+    p.nextDue = addDays(today, INTERVALS[p.intervalIndex]);
+    p.history.push({ date: today, result });
+    saveProblems();
+    render();
+  }
+
+  function renderLog() {
+    const body = document.getElementById('rc-log-body');
+    const query = (document.getElementById('rc-search').value || '').toLowerCase();
+    const today = todayStr();
+    const filtered = problems
+      .filter(p => !query || p.name.toLowerCase().includes(query) || (p.topic||'').toLowerCase().includes(query))
+      .sort((a,b) => a.nextDue.localeCompare(b.nextDue));
+
+    if (!filtered.length) {
+      body.innerHTML = `<div class="rc-log-empty">${problems.length ? 'No matches.' : 'Nothing logged yet. Add your first problem above.'}</div>`;
+      return;
+    }
+    body.innerHTML = '';
+    filtered.forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'rc-row';
+      const overdue = p.nextDue <= today;
+      const nameHtml = p.link
+        ? `<a href="${escapeAttr(p.link)}" target="_blank" rel="noopener">${escapeHtml(p.name)}</a>`
+        : escapeHtml(p.name);
+      const heat = p.history.slice(-10).map(h =>
+        `<div class="rc-heat-dot ${h.result === 'solved' ? 's' : 'f'}"></div>`
+      ).join('') || '<div class="rc-heat-dot"></div>';
+
+      row.innerHTML = `
+        <div>
+          <div class="rc-row-name">${nameHtml}</div>
+          <div class="rc-row-topic">${escapeHtml(p.topic || 'untagged')}</div>
+        </div>
+        <div class="rc-heat">${heat}</div>
+        <div class="rc-row-due ${overdue ? 'overdue' : 'ok'}">${overdue ? 'due' : p.nextDue}</div>
+        <div class="rc-row-due ok">stage ${p.intervalIndex+1}/${INTERVALS.length}</div>
+        <button class="rc-del" data-del="${p.id}" title="Remove">&#10005;</button>
+      `;
+      row.querySelector('[data-del]').addEventListener('click', () => {
+        problems = problems.filter(x => x.id !== p.id);
+        if (dailyPicks) dailyPicks.pickIds = dailyPicks.pickIds.filter(id => id !== p.id);
+        saveProblems();
+        savePicks();
+        render();
+      });
+      body.appendChild(row);
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function escapeAttr(s) { return escapeHtml(s); }
+
+  document.getElementById('rc-add-btn').addEventListener('click', () => {
+    const name = document.getElementById('rc-in-name').value.trim();
+    const topic = document.getElementById('rc-in-topic').value.trim();
+    const link = document.getElementById('rc-in-link').value.trim();
+    const notes = document.getElementById('rc-in-notes').value.trim();
+    if (!name) return;
+    const today = todayStr();
+    problems.push({
+      id: uid(),
+      name, topic, link, notes,
+      dateAdded: today,
+      lastReviewed: today,
+      intervalIndex: 0,
+      nextDue: addDays(today, INTERVALS[0]),
+      history: []
+    });
+    document.getElementById('rc-in-name').value = '';
+    document.getElementById('rc-in-topic').value = '';
+    document.getElementById('rc-in-link').value = '';
+    document.getElementById('rc-in-notes').value = '';
+    saveProblems();
+    render();
+  });
+
+  document.getElementById('rc-search').addEventListener('input', renderLog);
+
+  load();
+  render();
+})();
+</script>
+
+</body>
+</html>
