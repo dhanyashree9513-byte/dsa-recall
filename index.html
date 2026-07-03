@@ -28,7 +28,6 @@
     color: var(--text-primary);
     font-family: var(--sans);
     padding: 28px 20px 60px;
-    border-radius: 14px;
     min-height: 100vh;
   }
   .recall-root * { box-sizing: border-box; }
@@ -37,9 +36,32 @@
   .rc-header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px; }
   .rc-title { font-family: var(--mono); font-size: 22px; font-weight: 700; letter-spacing: 0.5px; }
   .rc-title span { color: var(--amber); }
-  .rc-stats { font-family: var(--mono); font-size: 12px; color: var(--text-muted); display:flex; gap: 14px; }
+  .rc-stats { font-family: var(--mono); font-size: 12px; color: var(--text-muted); display:flex; gap: 14px; align-items: center; }
   .rc-stats b { color: var(--text-primary); }
   .rc-sub { color: var(--text-muted); font-size: 13px; margin-bottom: 28px; }
+
+  /* Sync bar */
+  .rc-sync-bar {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .rc-sync-label { font-family: var(--mono); font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+  .rc-sync-input {
+    flex: 1; min-width: 180px; background: var(--bg-deep); border: 1px solid var(--border);
+    border-radius: 5px; color: var(--text-primary); padding: 6px 10px;
+    font-family: var(--mono); font-size: 12px; outline: none;
+  }
+  .rc-sync-input:focus { border-color: var(--amber); }
+  .rc-sync-btn {
+    background: var(--amber); color: #1A1408; font-weight: 700; font-size: 11px;
+    border: none; border-radius: 5px; padding: 6px 12px; cursor: pointer; white-space: nowrap;
+    font-family: var(--sans);
+  }
+  .rc-sync-btn:hover { filter: brightness(1.08); }
+  .rc-sync-status { font-family: var(--mono); font-size: 11px; white-space: nowrap; }
+  .rc-sync-status.ok { color: var(--green); }
+  .rc-sync-status.err { color: var(--rose); }
+  .rc-sync-status.busy { color: var(--amber); }
 
   .rc-section { margin-bottom: 30px; }
   .rc-section-title {
@@ -48,7 +70,6 @@
   }
   .rc-section-title::after { content:''; flex:1; height:1px; background: var(--border-soft); }
 
-  /* Today's picks */
   .rc-picks { display:grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   @media (max-width: 620px) { .rc-picks { grid-template-columns: 1fr; } }
   .rc-card {
@@ -76,7 +97,6 @@
   .rc-done-msg { font-family: var(--mono); font-size: 12px; color: var(--green); }
   .rc-empty { font-size: 13px; color: var(--text-muted); background: var(--bg-panel); border: 1px dashed var(--border); border-radius: 10px; padding: 20px; text-align:center; grid-column: 1 / -1; }
 
-  /* Add form */
   .rc-form { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; display:grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
   .rc-form input, .rc-form textarea {
     background: var(--bg-deep); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary);
@@ -91,13 +111,11 @@
   }
   .rc-add-btn:hover { filter: brightness(1.08); }
 
-  /* Log table */
   .rc-log-controls { display:flex; gap:8px; margin-bottom: 10px; }
-  .rc-log-controls input, .rc-log-controls select {
+  .rc-log-controls input {
     background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-primary);
-    border-radius: 6px; padding: 7px 10px; font-size: 12px; font-family: var(--sans);
+    border-radius: 6px; padding: 7px 10px; font-size: 12px; font-family: var(--sans); flex: 1;
   }
-  .rc-log-controls input { flex:1; }
   .rc-row { display:grid; grid-template-columns: 1fr auto auto auto auto; gap: 10px; align-items:center; padding: 10px 12px; border-bottom: 1px solid var(--border-soft); }
   .rc-row:last-child { border-bottom: none; }
   .rc-row-name { font-size: 13px; font-weight: 500; }
@@ -118,14 +136,22 @@
 
 <div class="recall-root">
   <div class="rc-wrap">
+
     <div class="rc-header">
       <div class="rc-title">re<span>call</span>()</div>
       <div class="rc-stats">
         <span><b id="rc-stat-total">0</b> logged</span>
         <span><b id="rc-stat-due">0</b> due today</span>
+        <span id="rc-sync-status" class="rc-sync-status"></span>
       </div>
     </div>
     <div class="rc-sub">Your spaced-recall log for DSA problems. Solve blind, mark honestly, let the intervals do the rest.</div>
+
+    <div class="rc-sync-bar">
+      <span class="rc-sync-label">GitHub sync token</span>
+      <input class="rc-sync-input" id="rc-token-input" type="password" placeholder="ghp_... (repo scope) — saved locally, syncs data to repo" />
+      <button class="rc-sync-btn" id="rc-token-save">Save &amp; sync</button>
+    </div>
 
     <div class="rc-section">
       <div class="rc-section-title">Today's recall</div>
@@ -150,15 +176,23 @@
       </div>
       <div class="rc-log-body" id="rc-log-body"></div>
     </div>
+
   </div>
 </div>
 
 <script>
 (function() {
   const INTERVALS = [1, 3, 7, 14, 30, 60, 120];
+  const OWNER = 'dhanyashree9513-byte';
+  const REPO  = 'dsa-recall';
+  const FILE  = 'data/problems.json';
+  const API   = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}`;
 
-  let problems = [];
-  let dailyPicks = null; // {date, pickIds}
+  let problems   = [];
+  let dailyPicks = null;
+  let fileSha    = null; // SHA of data/problems.json in the repo
+
+  // ── helpers ──────────────────────────────────────────────────────────────
 
   function todayStr() {
     const d = new Date();
@@ -173,25 +207,102 @@
     return Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00')) / 86400000);
   }
   function uid() { return 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function getToken() { return localStorage.getItem('rc-gh-token') || ''; }
 
-  function load() {
+  function setSyncStatus(msg, cls) {
+    const el = document.getElementById('rc-sync-status');
+    el.textContent = msg;
+    el.className = 'rc-sync-status' + (cls ? ' ' + cls : '');
+  }
+
+  // ── GitHub sync ──────────────────────────────────────────────────────────
+
+  async function ghFetch(method, body) {
+    const token = getToken();
+    if (!token) return null;
+    const opts = {
+      method,
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json'
+      }
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(API, opts);
+    if (res.status === 404 && method === 'GET') return null; // file doesn't exist yet
+    if (!res.ok) throw new Error(`GitHub API ${res.status}`);
+    if (res.status === 204) return null;
+    return res.json();
+  }
+
+  async function loadFromGitHub() {
+    const token = getToken();
+    if (!token) return false;
+    setSyncStatus('syncing…', 'busy');
     try {
-      const raw = localStorage.getItem('rc-problems');
-      problems = raw ? JSON.parse(raw) : [];
-    } catch (e) { problems = []; }
+      const data = await ghFetch('GET');
+      if (!data) { setSyncStatus('no remote data yet', 'ok'); return false; }
+      fileSha = data.sha;
+      const json = JSON.parse(atob(data.content.replace(/\n/g, '')));
+      problems   = json.problems   || [];
+      dailyPicks = json.dailyPicks || null;
+      // mirror to localStorage as cache
+      localStorage.setItem('rc-problems',    JSON.stringify(problems));
+      localStorage.setItem('rc-daily-picks', JSON.stringify(dailyPicks));
+      localStorage.setItem('rc-gh-sha',      fileSha);
+      setSyncStatus('synced', 'ok');
+      return true;
+    } catch (e) {
+      setSyncStatus('sync error', 'err');
+      console.error(e);
+      return false;
+    }
+  }
+
+  async function saveToGitHub() {
+    const token = getToken();
+    if (!token) return;
+    setSyncStatus('saving…', 'busy');
     try {
-      const raw = localStorage.getItem('rc-daily-picks');
-      dailyPicks = raw ? JSON.parse(raw) : null;
-    } catch (e) { dailyPicks = null; }
+      const payload = { problems, dailyPicks };
+      const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
+      const sha = fileSha || localStorage.getItem('rc-gh-sha') || undefined;
+      const body = { message: 'update problems', content, branch: 'main' };
+      if (sha) body.sha = sha;
+      const res = await ghFetch('PUT', body);
+      if (res && res.content) {
+        fileSha = res.content.sha;
+        localStorage.setItem('rc-gh-sha', fileSha);
+      }
+      setSyncStatus('saved to GitHub', 'ok');
+    } catch (e) {
+      setSyncStatus('save failed', 'err');
+      console.error(e);
+    }
   }
-  function saveProblems() {
-    try { localStorage.setItem('rc-problems', JSON.stringify(problems)); }
-    catch (e) { console.error('save failed', e); }
+
+  // ── localStorage fallback ────────────────────────────────────────────────
+
+  function loadFromLocal() {
+    try { problems   = JSON.parse(localStorage.getItem('rc-problems'))   || []; } catch(e) { problems = []; }
+    try { dailyPicks = JSON.parse(localStorage.getItem('rc-daily-picks')) || null; } catch(e) { dailyPicks = null; }
+    fileSha = localStorage.getItem('rc-gh-sha') || null;
   }
-  function savePicks() {
-    try { localStorage.setItem('rc-daily-picks', JSON.stringify(dailyPicks)); }
-    catch (e) { console.error('save failed', e); }
+
+  function saveToLocal() {
+    localStorage.setItem('rc-problems',    JSON.stringify(problems));
+    localStorage.setItem('rc-daily-picks', JSON.stringify(dailyPicks));
   }
+
+  // ── unified save ─────────────────────────────────────────────────────────
+
+  async function save() {
+    saveToLocal();
+    await saveToGitHub(); // no-op if no token
+  }
+
+  // ── picks logic ──────────────────────────────────────────────────────────
 
   function computePicks() {
     const today = todayStr();
@@ -200,16 +311,11 @@
       return dailyPicks.pickIds;
     }
     const overdue = problems.filter(p => p.nextDue <= today).sort((a,b) => a.nextDue.localeCompare(b.nextDue));
-    const fresh = problems.filter(p => p.history.length === 0 && daysBetween(p.dateAdded, today) <= 2 && !overdue.includes(p));
-
+    const fresh   = problems.filter(p => p.history.length === 0 && daysBetween(p.dateAdded, today) <= 2 && !overdue.includes(p));
     let picks = [];
     if (overdue.length >= 2) {
       picks.push(overdue[0].id);
-      if (fresh.length && Math.random() < 0.4) {
-        picks.push(fresh[0].id);
-      } else {
-        picks.push(overdue[1].id);
-      }
+      picks.push(fresh.length && Math.random() < 0.4 ? fresh[0].id : overdue[1].id);
     } else if (overdue.length === 1) {
       picks.push(overdue[0].id);
       if (fresh.length) picks.push(fresh[0].id);
@@ -218,34 +324,32 @@
         if (rest.length) picks.push(rest[0].id);
       }
     } else {
-      const rest = problems.slice().sort((a,b) => a.nextDue.localeCompare(b.nextDue));
-      picks = rest.slice(0, 2).map(p => p.id);
+      picks = problems.slice().sort((a,b) => a.nextDue.localeCompare(b.nextDue)).slice(0,2).map(p => p.id);
     }
     dailyPicks = { date: today, pickIds: picks };
-    savePicks();
     return picks;
   }
+
+  // ── render ───────────────────────────────────────────────────────────────
 
   function render() {
     const today = todayStr();
     document.getElementById('rc-stat-total').textContent = problems.length;
-    document.getElementById('rc-stat-due').textContent = problems.filter(p => p.nextDue <= today).length;
+    document.getElementById('rc-stat-due').textContent   = problems.filter(p => p.nextDue <= today).length;
 
     const pickIds = computePicks();
     const picksEl = document.getElementById('rc-picks');
     picksEl.innerHTML = '';
     if (problems.length < 2) {
-      picksEl.innerHTML = '<div class="rc-empty">Add a couple of problems below and todays recall picks will show up here.</div>';
+      picksEl.innerHTML = '<div class="rc-empty">Add a couple of problems below and today\'s recall picks will show up here.</div>';
     } else if (!pickIds.length) {
-      picksEl.innerHTML = '<div class="rc-empty">Nothing due right now. Add more problems or check back tomorrow.</div>';
+      picksEl.innerHTML = '<div class="rc-empty">Nothing due right now. Check back tomorrow.</div>';
     } else {
       pickIds.forEach(id => {
         const p = problems.find(x => x.id === id);
-        if (!p) return;
-        picksEl.appendChild(renderPickCard(p, today));
+        if (p) picksEl.appendChild(renderPickCard(p, today));
       });
     }
-
     renderLog();
   }
 
@@ -253,17 +357,11 @@
     const wrap = document.createElement('div');
     wrap.className = 'rc-card';
     const reviewedToday = p.lastReviewed === today && p.history.length && p.history[p.history.length-1].date === today;
-
-    const stageDots = INTERVALS.map((_, i) =>
-      `<div class="rc-stage-dot ${i <= p.intervalIndex ? 'filled' : ''}"></div>`
-    ).join('');
-
-    const nameHtml = p.link
+    const stageDots = INTERVALS.map((_,i) => `<div class="rc-stage-dot ${i <= p.intervalIndex ? 'filled' : ''}"></div>`).join('');
+    const nameHtml  = p.link
       ? `<a href="${escapeAttr(p.link)}" target="_blank" rel="noopener">${escapeHtml(p.name)}</a>`
       : escapeHtml(p.name);
-
     const daysSince = daysBetween(p.lastReviewed, today);
-
     wrap.innerHTML = `
       <div class="rc-card-topic">${escapeHtml(p.topic || 'untagged')}</div>
       <div class="rc-card-name">${nameHtml}</div>
@@ -271,49 +369,42 @@
       <div class="rc-stage">${stageDots}</div>
       ${p.notes ? `<button class="rc-hint-toggle" data-hint="${p.id}">show hint</button><div class="rc-hint-box" id="hint-${p.id}">${escapeHtml(p.notes)}</div>` : ''}
       ${reviewedToday
-        ? `<div class="rc-done-msg">&#10003; reviewed today — see you at stage ${p.intervalIndex+1} in ${INTERVALS[p.intervalIndex]}d</div>`
+        ? `<div class="rc-done-msg">&#10003; reviewed today — next in ${INTERVALS[p.intervalIndex]}d</div>`
         : `<div class="rc-actions">
              <button class="rc-btn rc-btn-solved" data-solve="${p.id}">&#10003; Solved from memory</button>
              <button class="rc-btn rc-btn-struggle" data-struggle="${p.id}">Struggled</button>
-           </div>`
-      }
+           </div>`}
     `;
     if (reviewedToday) wrap.classList.add('done');
-
     const hintBtn = wrap.querySelector('[data-hint]');
     if (hintBtn) hintBtn.addEventListener('click', () => {
       const box = document.getElementById('hint-' + p.id);
       box.classList.toggle('show');
       hintBtn.textContent = box.classList.contains('show') ? 'hide hint' : 'show hint';
     });
-    const solveBtn = wrap.querySelector('[data-solve]');
-    if (solveBtn) solveBtn.addEventListener('click', () => markReview(p.id, 'solved'));
-    const struggleBtn = wrap.querySelector('[data-struggle]');
-    if (struggleBtn) struggleBtn.addEventListener('click', () => markReview(p.id, 'struggled'));
-
+    wrap.querySelector('[data-solve]')?.addEventListener('click', () => markReview(p.id, 'solved'));
+    wrap.querySelector('[data-struggle]')?.addEventListener('click', () => markReview(p.id, 'struggled'));
     return wrap;
   }
 
-  function markReview(id, result) {
+  async function markReview(id, result) {
     const today = todayStr();
     const p = problems.find(x => x.id === id);
     if (!p) return;
-    if (result === 'solved') {
-      p.intervalIndex = Math.min(p.intervalIndex + 1, INTERVALS.length - 1);
-    } else {
-      p.intervalIndex = Math.max(p.intervalIndex - 1, 0);
-    }
+    p.intervalIndex = result === 'solved'
+      ? Math.min(p.intervalIndex + 1, INTERVALS.length - 1)
+      : Math.max(p.intervalIndex - 1, 0);
     p.lastReviewed = today;
-    p.nextDue = addDays(today, INTERVALS[p.intervalIndex]);
+    p.nextDue      = addDays(today, INTERVALS[p.intervalIndex]);
     p.history.push({ date: today, result });
-    saveProblems();
     render();
+    await save();
   }
 
   function renderLog() {
-    const body = document.getElementById('rc-log-body');
-    const query = (document.getElementById('rc-search').value || '').toLowerCase();
-    const today = todayStr();
+    const body    = document.getElementById('rc-log-body');
+    const query   = (document.getElementById('rc-search').value || '').toLowerCase();
+    const today   = todayStr();
     const filtered = problems
       .filter(p => !query || p.name.toLowerCase().includes(query) || (p.topic||'').toLowerCase().includes(query))
       .sort((a,b) => a.nextDue.localeCompare(b.nextDue));
@@ -324,70 +415,84 @@
     }
     body.innerHTML = '';
     filtered.forEach(p => {
-      const row = document.createElement('div');
+      const row     = document.createElement('div');
       row.className = 'rc-row';
       const overdue = p.nextDue <= today;
       const nameHtml = p.link
         ? `<a href="${escapeAttr(p.link)}" target="_blank" rel="noopener">${escapeHtml(p.name)}</a>`
         : escapeHtml(p.name);
-      const heat = p.history.slice(-10).map(h =>
-        `<div class="rc-heat-dot ${h.result === 'solved' ? 's' : 'f'}"></div>`
-      ).join('') || '<div class="rc-heat-dot"></div>';
-
+      const heat = p.history.slice(-10).map(h => `<div class="rc-heat-dot ${h.result==='solved'?'s':'f'}"></div>`).join('') || '<div class="rc-heat-dot"></div>';
       row.innerHTML = `
         <div>
           <div class="rc-row-name">${nameHtml}</div>
           <div class="rc-row-topic">${escapeHtml(p.topic || 'untagged')}</div>
         </div>
         <div class="rc-heat">${heat}</div>
-        <div class="rc-row-due ${overdue ? 'overdue' : 'ok'}">${overdue ? 'due' : p.nextDue}</div>
+        <div class="rc-row-due ${overdue?'overdue':'ok'}">${overdue?'due':p.nextDue}</div>
         <div class="rc-row-due ok">stage ${p.intervalIndex+1}/${INTERVALS.length}</div>
         <button class="rc-del" data-del="${p.id}" title="Remove">&#10005;</button>
       `;
-      row.querySelector('[data-del]').addEventListener('click', () => {
-        problems = problems.filter(x => x.id !== p.id);
+      row.querySelector('[data-del]').addEventListener('click', async () => {
+        problems   = problems.filter(x => x.id !== p.id);
         if (dailyPicks) dailyPicks.pickIds = dailyPicks.pickIds.filter(id => id !== p.id);
-        saveProblems();
-        savePicks();
         render();
+        await save();
       });
       body.appendChild(row);
     });
   }
 
-  function escapeHtml(s) {
-    return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-  function escapeAttr(s) { return escapeHtml(s); }
+  function escapeHtml(s)  { return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function escapeAttr(s)  { return escapeHtml(s); }
 
-  document.getElementById('rc-add-btn').addEventListener('click', () => {
-    const name = document.getElementById('rc-in-name').value.trim();
+  // ── token UI ─────────────────────────────────────────────────────────────
+
+  function initTokenUI() {
+    const input = document.getElementById('rc-token-input');
+    const btn   = document.getElementById('rc-token-save');
+    const saved = getToken();
+    if (saved) input.value = saved;
+
+    btn.addEventListener('click', async () => {
+      const t = input.value.trim();
+      if (!t) return;
+      localStorage.setItem('rc-gh-token', t);
+      const loaded = await loadFromGitHub();
+      if (loaded) render();
+    });
+  }
+
+  // ── boot ─────────────────────────────────────────────────────────────────
+
+  async function boot() {
+    initTokenUI();
+    loadFromLocal();         // fast local paint
+    render();
+    await loadFromGitHub();  // then overwrite with remote truth if token exists
+    render();
+  }
+
+  // ── add problem ──────────────────────────────────────────────────────────
+
+  document.getElementById('rc-add-btn').addEventListener('click', async () => {
+    const name  = document.getElementById('rc-in-name').value.trim();
     const topic = document.getElementById('rc-in-topic').value.trim();
-    const link = document.getElementById('rc-in-link').value.trim();
+    const link  = document.getElementById('rc-in-link').value.trim();
     const notes = document.getElementById('rc-in-notes').value.trim();
     if (!name) return;
     const today = todayStr();
-    problems.push({
-      id: uid(),
-      name, topic, link, notes,
-      dateAdded: today,
-      lastReviewed: today,
-      intervalIndex: 0,
-      nextDue: addDays(today, INTERVALS[0]),
-      history: []
-    });
-    document.getElementById('rc-in-name').value = '';
+    problems.push({ id: uid(), name, topic, link, notes, dateAdded: today, lastReviewed: today, intervalIndex: 0, nextDue: addDays(today, INTERVALS[0]), history: [] });
+    document.getElementById('rc-in-name').value  = '';
     document.getElementById('rc-in-topic').value = '';
-    document.getElementById('rc-in-link').value = '';
+    document.getElementById('rc-in-link').value  = '';
     document.getElementById('rc-in-notes').value = '';
-    saveProblems();
     render();
+    await save();
   });
 
   document.getElementById('rc-search').addEventListener('input', renderLog);
 
-  load();
-  render();
+  boot();
 })();
 </script>
 
