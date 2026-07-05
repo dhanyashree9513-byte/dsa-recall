@@ -2,7 +2,7 @@
   "problems": [
     {
       "id": "p_mr3ub9p5zhhl2",
-      "name": "1. Two Sum | You are given an array of integers nums and an integer value target. Your task is to find two numbers in the array that add up to the target value and return their indices.",
+      "name": "1|Two Sum | You are given an array of integers nums and an integer value target. Your task is to find two numbers in the array that add up to the target value and return their indices.",
       "topic": "Array",
       "link": "https://algo.monster/liteproblems/1#code",
       "notes": "",
