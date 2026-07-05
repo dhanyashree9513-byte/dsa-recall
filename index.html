@@ -164,8 +164,7 @@
 
     <div class="rc-sync-bar" id="rc-sync-bar">
       <span class="rc-sync-label">GitHub sync token</span>
-      <input class="rc-sync-input" id="rc-token-input" type="password" placeholder="ghp_... (repo scope) — saved locally, syncs data to repo" />
-      <button class="rc-sync-btn" id="rc-token-save">Save &amp; sync</button>
+      <input class="rc-sync-input" id="rc-token-input" type="password" placeholder="ghp_... (repo scope) — pastes and syncs automatically" />
     </div>
     <div class="rc-sync-connected" id="rc-sync-connected" style="display:none;">
       <span>&#10003; auto-syncing to GitHub</span>
@@ -486,19 +485,22 @@
 
   function initTokenUI() {
     const input      = document.getElementById('rc-token-input');
-    const btn        = document.getElementById('rc-token-save');
     const changeBtn  = document.getElementById('rc-token-change');
     const saved      = getToken();
     if (saved) input.value = saved;
     showSyncBarState();
 
-    btn.addEventListener('click', async () => {
+    async function commitToken() {
       const t = input.value.trim();
-      if (!t) return;
+      if (!t || t === getToken()) return;
       localStorage.setItem('rc-gh-token', t);
       showSyncBarState();
       const loaded = await loadFromGitHub();
       if (loaded) render();
+    }
+    input.addEventListener('blur', commitToken);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
     });
 
     changeBtn.addEventListener('click', () => {
