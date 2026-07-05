@@ -1,0 +1,34 @@
+{
+  "problems": [
+    {
+      "id": "p_mr3ub9p5zhhl2",
+      "name": "1. Two Sum | You are given an array of integers nums and an integer value target. Your task is to find two numbers in the array that add up to the target value and return their indices.",
+      "topic": "Array",
+      "link": "https://algo.monster/liteproblems/1#code",
+      "notes": "",
+      "dateAdded": "2026-07-03",
+      "lastReviewed": "2026-07-03",
+      "intervalIndex": 0,
+      "nextDue": "2026-07-04",
+      "history": []
+    },
+    {
+      "id": "p_mr825xrrhdn5f",
+      "name": "344| reverse a list of letters, without making a new list.",
+      "topic": "two pointer",
+      "link": "",
+      "notes": "",
+      "dateAdded": "2026-07-05",
+      "lastReviewed": "2026-07-05",
+      "intervalIndex": 0,
+      "nextDue": "2026-07-06",
+      "history": []
+    }
+  ],
+  "dailyPicks": {
+    "date": "2026-07-05",
+    "pickIds": [
+      "p_mr3ub9p5zhhl2"
+    ]
+  }
+}
