@@ -87,6 +87,11 @@
   .rc-hint-toggle { font-family: var(--mono); font-size: 11px; color: var(--text-dim); cursor:pointer; text-decoration: underline; text-underline-offset: 3px; background:none; border:none; padding:0; margin-bottom: 12px; display:block; }
   .rc-hint-box { font-size: 12px; color: var(--text-muted); background: var(--bg-deep); border: 1px solid var(--border-soft); border-radius: 6px; padding: 8px 10px; margin-bottom: 12px; display:none; }
   .rc-hint-box.show { display:block; }
+  .rc-scratch { width: 100%; min-height: 160px; resize: vertical; background: var(--bg-deep); border: 1px solid var(--border-soft); border-radius: 6px; color: var(--text-primary); padding: 10px 12px; font-family: var(--mono); font-size: 12px; outline: none; margin-bottom: 8px; }
+  .rc-scratch:focus { border-color: var(--amber); }
+  .rc-scratch-row { display:flex; justify-content: flex-end; margin-bottom: 12px; }
+  .rc-reset-btn { font-family: var(--mono); font-size: 11px; color: var(--text-dim); background:none; border: 1px solid var(--border-soft); border-radius: 5px; padding: 4px 9px; cursor: pointer; }
+  .rc-reset-btn:hover { color: var(--rose); border-color: var(--rose); }
   .rc-actions { display:flex; gap: 8px; }
   .rc-btn { font-family: var(--sans); font-size: 12px; font-weight: 600; padding: 8px 12px; border-radius: 7px; border: 1px solid transparent; cursor: pointer; flex:1; transition: transform 0.1s ease; }
   .rc-btn:active { transform: scale(0.97); }
@@ -368,6 +373,8 @@
       <div class="rc-card-meta">last reviewed ${daysSince === 0 ? 'today' : daysSince + 'd ago'} · stage ${p.intervalIndex+1}/${INTERVALS.length}</div>
       <div class="rc-stage">${stageDots}</div>
       ${p.notes ? `<button class="rc-hint-toggle" data-hint="${p.id}">show hint</button><div class="rc-hint-box" id="hint-${p.id}">${escapeHtml(p.notes)}</div>` : ''}
+      <textarea class="rc-scratch" id="scratch-${p.id}" placeholder="Work it out here... (not saved)"></textarea>
+      <div class="rc-scratch-row"><button class="rc-reset-btn" data-reset="${p.id}">Reset</button></div>
       ${reviewedToday
         ? `<div class="rc-done-msg">&#10003; reviewed today — next in ${INTERVALS[p.intervalIndex]}d</div>`
         : `<div class="rc-actions">
@@ -384,6 +391,10 @@
     });
     wrap.querySelector('[data-solve]')?.addEventListener('click', () => markReview(p.id, 'solved'));
     wrap.querySelector('[data-struggle]')?.addEventListener('click', () => markReview(p.id, 'struggled'));
+    wrap.querySelector('[data-reset]')?.addEventListener('click', () => {
+      const box = document.getElementById('scratch-' + p.id);
+      if (box) box.value = '';
+    });
     return wrap;
   }
 
