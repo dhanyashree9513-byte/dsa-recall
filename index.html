@@ -63,6 +63,16 @@
   .rc-sync-status.err { color: var(--rose); }
   .rc-sync-status.busy { color: var(--amber); }
 
+  .rc-sync-connected {
+    font-family: var(--mono); font-size: 11px; color: var(--green);
+    margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+  }
+  .rc-reconnect-btn {
+    background: none; border: none; color: var(--text-dim); text-decoration: underline;
+    text-underline-offset: 2px; cursor: pointer; font-family: var(--sans); font-size: 11px; padding: 0;
+  }
+  .rc-reconnect-btn:hover { color: var(--text-muted); }
+
   .rc-section { margin-bottom: 30px; }
   .rc-section-title {
     font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
@@ -152,10 +162,14 @@
     </div>
     <div class="rc-sub">Your spaced-recall log for DSA problems. Solve blind, mark honestly, let the intervals do the rest.</div>
 
-    <div class="rc-sync-bar">
+    <div class="rc-sync-bar" id="rc-sync-bar">
       <span class="rc-sync-label">GitHub sync token</span>
       <input class="rc-sync-input" id="rc-token-input" type="password" placeholder="ghp_... (repo scope) — saved locally, syncs data to repo" />
       <button class="rc-sync-btn" id="rc-token-save">Save &amp; sync</button>
+    </div>
+    <div class="rc-sync-connected" id="rc-sync-connected" style="display:none;">
+      <span>&#10003; auto-syncing to GitHub</span>
+      <button class="rc-reconnect-btn" id="rc-token-change">change token</button>
     </div>
 
     <div class="rc-section">
@@ -458,18 +472,40 @@
 
   // ── token UI ─────────────────────────────────────────────────────────────
 
+  function showSyncBarState() {
+    const bar       = document.getElementById('rc-sync-bar');
+    const connected = document.getElementById('rc-sync-connected');
+    if (getToken()) {
+      bar.style.display = 'none';
+      connected.style.display = 'flex';
+    } else {
+      bar.style.display = 'flex';
+      connected.style.display = 'none';
+    }
+  }
+
   function initTokenUI() {
-    const input = document.getElementById('rc-token-input');
-    const btn   = document.getElementById('rc-token-save');
-    const saved = getToken();
+    const input      = document.getElementById('rc-token-input');
+    const btn        = document.getElementById('rc-token-save');
+    const changeBtn  = document.getElementById('rc-token-change');
+    const saved      = getToken();
     if (saved) input.value = saved;
+    showSyncBarState();
 
     btn.addEventListener('click', async () => {
       const t = input.value.trim();
       if (!t) return;
       localStorage.setItem('rc-gh-token', t);
+      showSyncBarState();
       const loaded = await loadFromGitHub();
       if (loaded) render();
+    });
+
+    changeBtn.addEventListener('click', () => {
+      showSyncBarState();
+      document.getElementById('rc-sync-bar').style.display = 'flex';
+      document.getElementById('rc-sync-connected').style.display = 'none';
+      input.focus();
     });
   }
 
