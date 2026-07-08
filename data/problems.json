@@ -23,12 +23,25 @@
       "intervalIndex": 0,
       "nextDue": "2026-07-06",
       "history": []
+    },
+    {
+      "id": "p_mrcc42nqcp8a0",
+      "name": "387|First Unique Character in a String|You are given a string s. Your task is to find the first character in the string that appears only once (non-repeating) and return its index position. If every character in the string appears more than once, return -1.",
+      "topic": "Queue",
+      "link": "",
+      "notes": "",
+      "dateAdded": "2026-07-08",
+      "lastReviewed": "2026-07-08",
+      "intervalIndex": 0,
+      "nextDue": "2026-07-09",
+      "history": []
     }
   ],
   "dailyPicks": {
-    "date": "2026-07-05",
+    "date": "2026-07-08",
     "pickIds": [
-      "p_mr3ub9p5zhhl2"
+      "p_mr3ub9p5zhhl2",
+      "p_mr825xrrhdn5f"
     ]
   }
 }
